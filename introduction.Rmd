@@ -23,33 +23,38 @@ This provides a convenient way of transferring biological knowledge across datas
 allowing users to leverage the domain expertise implicit in the creation of each reference.
 The most common application of `r Biocpkg("SingleR")` involves predicting cell type (or "state", or "kind") in a new dataset,
 a process that is facilitated by the availability of curated references and compatibility with user-supplied datasets.
-In this manner, the burden of manually interpreting clusters and defining marker genes only has to be done once, for the reference dataset, and this knowledge can be propagated to new datasets in an automated manner.
+In this manner, the burden of manually interpreting clusters and defining marker genes only has to be done once, for the reference dataset,
+and this knowledge can be propagated to new datasets in an automated manner.
 
 ## Method description
 
 `r Biocpkg("SingleR")` can be considered a robust variant of nearest-neighbors classification,
 with some tweaks to improve resolution for closely related labels.
-For each test cell:
 
-1. We compute the Spearman correlation between its expression profile and that of each reference sample.
-The use of Spearman's correlation provides a measure of robustness to batch effects across datasets.
-The calculation only uses the union of marker genes identified by pairwise comparisons between labels in the reference data,
-so as to improve resolution of separation between labels.
-2. We define the per-label score as a fixed quantile (by default, 0.8) of the correlations across all samples with that label.
-This accounts for differences in the number of reference samples for each label, 
-which interferes with simpler flavors of nearest neighbor classification;
-it also avoids penalizing classifications to heterogeneous labels by only requiring a good match to a minority of samples.
-3. We repeat the score calculation for all labels in the reference dataset.
-The label with the highest score is used as `r Biocpkg("SingleR")`'s prediction for this cell.
+The very first step is to compute a set of marker genes for every label in the reference data set
+via pairwise comparisons between the labeles in the reference data.
+Then, for each cell in the data set to be annotated ("test set"):
+
+1. We compute the Spearman correlation between that cell's expression profile and that of each labelled reference sample for the marker genes.
+Spearman's correlation provides a measure of robustness to batch effects across datasets and we use the 
+union of all marker genes to improve the resolution of separation between labels.
+This steps results in a range of correlation scores and we now need to identify (2) a unified score for all the reference samples with the same
+label and (3) the label with the highest score.
+2. We thus define the per-label score as the quantile (default: 0.8) of the range of correlation scores obtained from the comparisons with
+all reference samples with that particular label.
+This strategy accounts for differences in the number of reference samples for each label and it avoids penalizing classifications to heterogeneous labels
+as a good match of the test cell with a minority of samples of the same label is sufficient.
+3. We then repeat the score calculation for all labels in the reference dataset.
+The label with the highest score is used as `r Biocpkg("SingleR")`'s prediction for the test cell.
 4. We optionally perform a fine-tuning step to improve resolution between closely related labels.
-The reference dataset is subsetted to only include labels with scores close to the maximum;
-scores are recomputed using only marker genes for the subset of labels, thus focusing on the most relevant features;
+For this, the reference dataset is subsetted to only include labels with scores close to the maximum;
+scores are then recomputed using only marker genes for the subset of labels, thus focusing on the most relevant features;
 and this process is iterated until only one label remains.
 
 ## Quick start
 
-We will demonstrate the use of `SingleR()` on a well-known 10X Genomics dataset [@zheng2017massively]
-with the Human Primary Cell Atlas dataset [@hpcaRef] as the reference.
+We will demonstrate the use of `SingleR()` on a well-known 10X Genomics dataset of peripheral blood mononuclear cells (PBMCs) 
+obtained from whole blood [@zheng2017massively] that we annotate with the Human Primary Cell Atlas dataset [@hpcaRef] as the reference.
 
 ```{r}
 # Loading test data.
